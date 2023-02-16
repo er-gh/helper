@@ -3,23 +3,34 @@ import tkinter as tk
 from tkinter import *
 from tkinter import ttk, filedialog
 from tkinter.messagebox import askyesno, showwarning
-from datetime import datetime
+from datetime import datetime, timedelta
 import pystray
 from PIL import Image
 
 
 def read_file() -> pd.DataFrame:
-    filepath = filedialog.askopenfilename(defaultextension='xlsx')
+    #filepath = filedialog.askopenfilename(defaultextension='xlsx')
+    filepath = 'test.xlsx'
     if filepath != '':
         excel_data = pd.read_excel(filepath)
         return pd.DataFrame(excel_data)
 
-def write_file(index, col, data, sheet_name):
+def write_file(col, data, sheet_name):
     filepath = filedialog.asksaveasfilename(defaultextension='xlsx')
     if filepath != '':
-        df1 = pd.DataFrame(data, index=index, columns=col)
-        df1.to_excel(f"{filepath}", sheet_name=sheet_name)
+        df1 = pd.DataFrame(data, columns=col)
+        df1.to_excel(f"{filepath}", sheet_name=sheet_name, index=False)
 
+def diff_time(time_start: datetime, time_stop: datetime) -> timedelta:
+    start = timedelta(minutes=time_start.minute, hours=time_start.hour, days=time_start.day)
+    stop = timedelta(minutes=time_stop.minute, hours=time_stop.hour, days=time_stop.day)
+    return (stop - start)
+
+def sum_time(*times) -> timedelta:
+    sum = timedelta()
+    for time in times: sum += time
+    return sum
+    
 
 data = read_file()
 data = data.fillna('').values.tolist()
@@ -29,6 +40,9 @@ for item in data:
 data = tmp
 names = [1, 2, 3, 4, 5, 6]
 selected_item = ()
+edited_tasks = ['edited_tasks', 'solved_tasks', 'solved_time']
+edited_tasks = [0, 0, []]
+str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
 
 
@@ -36,12 +50,13 @@ def window():
 
     def start():
         global selected_item
+        global str_time_start
         global time_start
         listBox.select_set(selected_item[0])
-        cur_datetime = datetime.now()
-        time_start = f'{cur_datetime.hour:02}:{cur_datetime.minute:02}'
+        time_start = datetime.now()
+        str_time_start = f'{time_start.hour:02}:{time_start.minute:02}'
         if len(selected_item) > 0:
-            label_start['text'] = f'{data[selected_item[0]][1]} {time_start}'
+            label_start['text'] = f'{data[selected_item[0]][1]} {str_time_start}'
             label_stop['text'] = ''
             btn_start['state'] = DISABLED
             btn_stop['state'] = NORMAL
@@ -51,13 +66,15 @@ def window():
     
     def stop():
         global selected_item
+        global str_time_stop
         global time_stop
+        global edited_tasks
         if combo.get() == "":
             showwarning(message="Пользователь не выбран")
         else:
-            cur_datetime = datetime.now()
-            time_stop = f'{cur_datetime.hour:02}:{cur_datetime.minute:02}'
-            label_stop['text'] = f'{data[selected_item[0]][1]} {time_stop}'
+            time_stop = datetime.now()
+            str_time_stop = f'{time_stop.hour:02}:{time_stop.minute:02}'
+            label_stop['text'] = f'{data[selected_item[0]][1]} {str_time_stop}'
 
             if len(data[selected_item[0]]) > 2:
                 if (entry.get() == '' and data[selected_item[0]][2] == '') or (entry.get() == data[selected_item[0]][2]):
@@ -65,10 +82,12 @@ def window():
                 else:
                     ask()
             else:
+                td_diff_time = diff_time(time_start, time_stop)
                 data[selected_item[0]].append(entry.get())
-                data[selected_item[0]].append(time_start)
-                data[selected_item[0]].append(time_stop)
-                data[selected_item[0]].append(combo.get())
+                data[selected_item[0]].append(str(td_diff_time)[:-3])
+                edited_tasks[0] += 1
+                edited_tasks[1] += int(entry.get())
+                edited_tasks[2].append(td_diff_time)
 
             if len(entry.get()) > 0:
                 listBox.itemconfig(selected_item[0], bg='green')
@@ -87,13 +106,15 @@ def window():
                             message="Изменить значение?", 
                             detail=f"Текущее значение: {data[selected_item[0]][2]}")
         if result: data[selected_item[0]][2] = entry.get()
+
+    def data_last():
+        data.append([])
+        data.append(['Всего', f'{edited_tasks[0]}', f'{edited_tasks[1]}', f'{str(sum_time(*edited_tasks[2]))[:-3]}'])
     
     def save():
-        indexes = []
-        date = f'{datetime.now().day:02}|{datetime.now().month:02}|{datetime.now().year:02}'
-        for i in range(len(data)):
-            indexes.append(data[i][0])
-        write_file(data=data, index=indexes, col=['№п/п', 'Задание', 'Решено', 'Начало', 'Конец', 'ФИО'], sheet_name=date)
+        date = f'{datetime.now().strftime("%d|%m|%y")}'
+        data_last()
+        write_file(data=data, col=['№п/п', 'Задание', 'Решено', 'Время'], sheet_name=date)
 
     def onListboxItemSelect(event):
         global selected_item
@@ -186,7 +207,7 @@ def window():
     label_stop.pack()
 
 
-    root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
+    #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
     root.iconphoto(False, tk.PhotoImage(file='icon.png'))
 
     root.mainloop()
