@@ -10,7 +10,7 @@ from PIL import Image
 
 def read_file() -> pd.DataFrame:
     #filepath = filedialog.askopenfilename(defaultextension='xlsx')
-    filepath = 'test.xlsx'
+    filepath = '123.xlsx'
     if filepath != '':
         excel_data = pd.read_excel(filepath)
         return pd.DataFrame(excel_data)
@@ -30,6 +30,10 @@ def sum_time(*times) -> timedelta:
     sum = timedelta()
     for time in times: sum += time
     return sum
+
+def dt_to_td(time: datetime) -> timedelta:
+    time = timedelta(hours=time.hour, minutes=time.minute)
+    return time
     
 
 data = read_file()
@@ -77,21 +81,21 @@ def window():
             label_stop['text'] = f'{data[selected_item[0]][1]} {str_time_stop}'
 
             if len(data[selected_item[0]]) > 2:
-                if (entry.get() == '' and data[selected_item[0]][2] == '') or (entry.get() == data[selected_item[0]][2]):
+                if (entry.get() == data[selected_item[0]][2]): #(entry.get() == '' and data[selected_item[0]][2] == '') or entry.get().replace(' ', '') == ''
                     pass
                 else:
                     ask()
             else:
-                td_diff_time = diff_time(time_start, time_stop)
+                dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
+                minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
                 data[selected_item[0]].append(entry.get())
-                data[selected_item[0]].append(str(td_diff_time)[:-3])
-                edited_tasks[0] += 1
-                edited_tasks[1] += int(entry.get())
-                edited_tasks[2].append(td_diff_time)
+                data[selected_item[0]].append(str(int(minutes_time)))
 
             if len(entry.get()) > 0:
                 listBox.itemconfig(selected_item[0], bg='green')
                 entry.delete(0, END)
+            elif data[selected_item[0]][2] != '':
+                listBox.itemconfig(selected_item[0], bg='green')
             else:
                 listBox.itemconfig(selected_item[0], bg='yellow')
 
@@ -102,10 +106,84 @@ def window():
             btn_save['state'] = NORMAL
 
     def ask():
-        result = askyesno(title="Подтверждение действия", 
-                            message="Изменить значение?", 
-                            detail=f"Текущее значение: {data[selected_item[0]][2]}")
-        if result: data[selected_item[0]][2] = entry.get()
+        result = askChangeAddCancel(root)
+        if result: 
+            try:
+                data[selected_item[0]][2] = int(entry.get()) + int(data[selected_item[0]][2])
+            except ValueError:
+                pass
+        elif result == False:
+            data[selected_item[0]][2] = entry.get()
+        if result != None:
+            dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
+            minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
+            data[selected_item[0]][3] = int(data[selected_item[0]][3]) + minutes_time
+        
+
+
+    def askChangeAddCancel(root_win):
+        window = Toplevel(root_win)
+        window.title = f'{entry.get()}'
+        width, height = 400, 225
+        window.geometry(f"{width}x{height}+{int(root_win.winfo_screenwidth() / 2) - int(width / 2)}+{int(root_win.winfo_screenheight() / 2) - int(height / 2)}")
+        window.resizable(False, False)
+        window["background"] = 'white'
+
+        result = None
+
+        def cancel(window):
+            win_destroy(window)
+
+        def add(window):
+            nonlocal result
+            result = True
+            win_destroy(window)
+
+        def change(window):
+            nonlocal result
+            result = False
+            win_destroy(window)
+
+        def win_destroy(window):
+            window.grab_release()
+            window.destroy()
+        
+        window.protocol("WM_DELETE_WINDOW", lambda: cancel(window))
+
+        label = ttk.Label(window, text="Добавить или обновить информацию?")
+        label.config(background='white', font=("", 12))
+        label.pack(anchor='center',side='top', pady=5)
+
+        label_task = ttk.Label(window, text=f'Задание: {data[selected_item[0]][1]}')
+        label_task.config(background='white')
+        label_task.pack(anchor=W, padx=5, pady=5)
+
+        label_done = ttk.Label(window, text=f'Сделано: {int(data[selected_item[0]][2])}')
+        label_done.config(background='white')
+        label_done.pack(anchor=W, padx=5, pady=5)
+
+        label_time = ttk.Label(window, text=f'Время(мин): {int(data[selected_item[0]][3])}')
+        label_time.config(background='white')
+        label_time.pack(anchor=W, padx=5, pady=5)
+
+        frame = ttk.Frame(window)
+        frame.pack(side=BOTTOM, fill=X)
+
+        for c in range(3): frame.columnconfigure(index=c, weight=1)
+
+        close_button = ttk.Button(frame, text='Закрыть', command=lambda: cancel(window))
+        close_button.grid(column=2, row=0, padx=5, pady=7, sticky=NSEW)
+
+        update_button = ttk.Button(frame, text="Обновить", command=lambda: change(window))
+        update_button.grid(column=1, row=0, padx=5, pady=7, sticky=NSEW)
+
+        add_button = ttk.Button(frame, text="Добавить", command=lambda: add(window))
+        add_button.grid(column=0, row=0, padx=5, pady=7, sticky=NSEW)
+
+        window.grab_set()
+        window.wait_window()
+        return result
+
 
     def data_last():
         data.append([])
@@ -113,8 +191,8 @@ def window():
     
     def save():
         date = f'{datetime.now().strftime("%d|%m|%y")}'
-        data_last()
-        write_file(data=data, col=['№п/п', 'Задание', 'Решено', 'Время'], sheet_name=date)
+        #data_last()
+        write_file(data=data, col=['№п/п', 'Задание', 'Сделано', 'Время(мин)'], sheet_name=date)
 
     def onListboxItemSelect(event):
         global selected_item
@@ -123,6 +201,14 @@ def window():
             btn_start['state'] = NORMAL
             item = data[selected_item[0]][1]
             item_label.config(text=item)
+            try:
+                task = data[selected_item[0]][2]
+                time = data[selected_item[0]][3]
+                label_task_info.config(text=f'Сделано: {int(task)}')
+                label_time_info.config(text=f'Время(мин): {int(time)}')
+            except IndexError:
+                label_task_info.config(text=f'')
+                label_time_info.config(text=f'')
 
     def onComboboxSelect(event):
         if len(listBox.curselection()) > 0:
@@ -142,6 +228,12 @@ def window():
         menu = pystray.Menu(pystray.MenuItem('Открыть', onShowWindow, default=True), pystray.MenuItem('Закрыть', onQuitWindow))
         icon = pystray.Icon("Имя", image, "Отчет", menu)
         icon.run()
+
+    def checkStateOnStart():
+        for i in range(len(data)):
+            if len(data[i]) > 2:
+                listBox.itemconfig(i, bg='green')
+
 
     root = Tk()
     root.title('')
@@ -170,7 +262,12 @@ def window():
     btn_start.pack(side=LEFT)
     btn_stop.pack(side=RIGHT)
 
-    data_var = Variable(value=data)
+    str_data = []
+    for i in range(len(data)):
+        temp_str_data = f'{i + 1:3d} : {data[i][1]}'
+        str_data.append(temp_str_data)
+    data_var = Variable(value=str_data)
+
     listBox = Listbox(f_left, listvariable=data_var, relief=FLAT, width=50)
     listBox.bind('<<ListboxSelect>>', onListboxItemSelect)
 
@@ -187,6 +284,11 @@ def window():
 
     entry = Entry(root)
     entry.pack()
+
+    label_task_info = ttk.Label(text='')
+    label_time_info = ttk.Label(text='')
+    label_task_info.pack()
+    label_time_info.pack()
 
     btn_save = ttk.Button(root, text='Сохранить', command=save)
     btn_save.pack(side=BOTTOM, pady=10)
@@ -206,6 +308,7 @@ def window():
     label_start.pack()
     label_stop.pack()
 
+    checkStateOnStart()
 
     #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
     root.iconphoto(False, tk.PhotoImage(file='icon.png'))
