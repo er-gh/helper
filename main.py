@@ -6,6 +6,7 @@ from tkinter.messagebox import askyesno, showwarning
 from datetime import datetime, timedelta
 import pystray
 from PIL import Image
+import json
 
 
 def read_file() -> pd.DataFrame:
@@ -32,8 +33,27 @@ def sum_time(*times) -> timedelta:
     return sum
 
 def dt_to_td(time: datetime) -> timedelta:
-    time = timedelta(hours=time.hour, minutes=time.minute)
-    return time
+    return timedelta(hours=time.hour, minutes=time.minute)
+
+def save_json(dct: dict):
+    with open('test.json', 'w') as fp:
+        json.dump(dct, fp, indent=4)
+
+def save_in_json(dct: dict, combo: ttk.Combobox) -> dict:
+    json_dict = {}
+    json_dict[f"{datetime.now().year}"] = {
+        f"{datetime.now().month}": {
+            f"{datetime.now().day}": {
+                f"{dct['task']}": {
+                    f"{combo.get()}": {
+                        "time": dct["time"],
+                        "solved": dct["solved"]
+                    }
+                }
+            }
+        }
+    }
+    save_json(json_dict)
     
 
 data = read_file()
@@ -42,12 +62,13 @@ tmp = list()
 for item in data:
     tmp.append(list(filter(None, item)))
 data = tmp
-names = [1, 2, 3, 4, 5, 6]
+names = ["A.A.A", "B.B.B", "C.C.C", "D.D.D", "E.E.E", "F.F.F"]
 selected_item = ()
 edited_tasks = ['edited_tasks', 'solved_tasks', 'solved_time']
 edited_tasks = [0, 0, []]
 str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
+to_json_dict = {}
 
 
 def window():
@@ -73,6 +94,7 @@ def window():
         global str_time_stop
         global time_stop
         global edited_tasks
+        global to_json_dict
         if combo.get() == "":
             showwarning(message="Пользователь не выбран")
         else:
@@ -81,7 +103,7 @@ def window():
             label_stop['text'] = f'{data[selected_item[0]][1]} {str_time_stop}'
 
             if len(data[selected_item[0]]) > 2:
-                if (entry.get() == data[selected_item[0]][2]): #(entry.get() == '' and data[selected_item[0]][2] == '') or entry.get().replace(' ', '') == ''
+                if (entry.get() == data[selected_item[0]][2]):
                     pass
                 else:
                     ask()
@@ -90,6 +112,9 @@ def window():
                 minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
                 data[selected_item[0]].append(entry.get())
                 data[selected_item[0]].append(str(int(minutes_time)))
+                to_json_dict["task"] = data[selected_item[0]][1]
+                to_json_dict["solved"] = data[selected_item[0]][2]
+                to_json_dict["time"] = data[selected_item[0]][3]
 
             if len(entry.get()) > 0:
                 listBox.itemconfig(selected_item[0], bg='green')
@@ -119,7 +144,6 @@ def window():
             minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
             data[selected_item[0]][3] = int(data[selected_item[0]][3]) + minutes_time
         
-
 
     def askChangeAddCancel(root_win):
         window = Toplevel(root_win)
@@ -191,7 +215,6 @@ def window():
     
     def save():
         date = f'{datetime.now().strftime("%d|%m|%y")}'
-        #data_last()
         write_file(data=data, col=['№п/п', 'Задание', 'Сделано', 'Время(мин)'], sheet_name=date)
 
     def onListboxItemSelect(event):
@@ -309,6 +332,10 @@ def window():
     label_stop.pack()
 
     checkStateOnStart()
+
+    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(to_json_dict, combo))
+    test_btn.pack()
+    print(to_json_dict)
 
     #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
     root.iconphoto(False, tk.PhotoImage(file='icon.png'))
