@@ -35,18 +35,59 @@ def sum_time(*times) -> timedelta:
 def dt_to_td(time: datetime) -> timedelta:
     return timedelta(hours=time.hour, minutes=time.minute)
 
+def load_json() -> dict | None:
+    try:
+        with open('save.json', encoding='utf-8') as fp:
+            json_dict = json.load(fp)
+        return json_dict
+    except FileNotFoundError:
+        return None
+
 def save_json(dct: dict):
-    with open('test.json', 'w', encoding='utf-8') as fp:
+    with open('save.json', 'w', encoding='utf-8') as fp:
         json.dump(dct, fp, indent=4, ensure_ascii=False)
 
-def save_in_json(dct: dict, combo: ttk.Combobox) -> dict:
+def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
     json_dict = {}
+    date = datetime.now()
+    year = str(date.year)
+    month = str(date.month)
+    day = str(date.day)
+    res = None
+    if dct_check != None: res = check_dict(dct_check, combo.get())
+
     json_dict[combo.get()] = {
-        datetime.now().year: {
-            datetime.now().month: {
-                datetime.now().day: {} } } }
-    json_dict[combo.get()][datetime.now().year][datetime.now().month][datetime.now().day].update(dct)
+            year: {
+                month: {
+                    day: {} } } }
+    
+    if res == None:
+        json_dict[combo.get()][year][month][day].update(dct)
+    if res == '':
+        json_dict[combo.get()][year][month][day].update(dct_check[combo.get()][year][month][day])
+        print('res = ""')
+    if res == 'y':
+        json_dict[combo.get()].update(dct_check[combo.get()])
+        print(f'res = "y"{dct_check}')
+    if res == 'm':
+        json_dict[combo.get()][year].update(dct_check[combo.get()][year])
+        print('res = "m"')
+    if res == 'd':
+        json_dict[combo.get()][year][month].update(dct_check[combo.get()][year][month])
+        print('res = "d"')
     save_json(json_dict)
+
+def check_dict(dct: dict, name: str) -> str:
+    year = datetime.now().year
+    month = datetime.now().month
+    day = datetime.now().day
+    try:
+        dct[name][str(year)][str(month)][str(day)]
+        return ''
+    except KeyError as e:
+        if str(year) == str(e): return "y"
+        if str(month) == str(e): return "m"
+        if str(day) == str(e): return "d"
     
 
 data = read_file()
@@ -62,6 +103,7 @@ edited_tasks = [0, 0, []]
 str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
 to_json_dict = {}
+from_json_dict = load_json()
 
 
 def window():
@@ -100,9 +142,6 @@ def window():
                     pass
                 else:
                     ask()
-                    # to_json_dict["task"] = data[selected_item[0]][1]
-                    # to_json_dict["solved"] = data[selected_item[0]][2]
-                    # to_json_dict["time"] = data[selected_item[0]][3]
             else:
                 dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
                 minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
@@ -112,9 +151,6 @@ def window():
                     data[selected_item[0]].append(0)
 
                 data[selected_item[0]].append(int(minutes_time))
-                # to_json_dict["task"] = data[selected_item[0]][1]
-                # to_json_dict["solved"] = data[selected_item[0]][2]
-                # to_json_dict["time"] = data[selected_item[0]][3]
 
             if len(entry.get()) > 0:
                 listBox.itemconfig(selected_item[0], bg='green')
@@ -350,8 +386,9 @@ def window():
 
     checkStateOnStart()
 
-    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(to_json_dict, combo))
+    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, combo))
     test_btn.pack()
+    print(from_json_dict)
     print(to_json_dict)
 
     #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
