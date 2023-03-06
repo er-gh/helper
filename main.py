@@ -36,23 +36,16 @@ def dt_to_td(time: datetime) -> timedelta:
     return timedelta(hours=time.hour, minutes=time.minute)
 
 def save_json(dct: dict):
-    with open('test.json', 'w') as fp:
-        json.dump(dct, fp, indent=4)
+    with open('test.json', 'w', encoding='utf-8') as fp:
+        json.dump(dct, fp, indent=4, ensure_ascii=False)
 
 def save_in_json(dct: dict, combo: ttk.Combobox) -> dict:
     json_dict = {}
-    json_dict[f"{datetime.now().year}"] = {
-        f"{datetime.now().month}": {
-            f"{datetime.now().day}": {
-                f"{dct['task']}": {
-                    f"{combo.get()}": {
-                        "time": dct["time"],
-                        "solved": dct["solved"]
-                    }
-                }
-            }
-        }
-    }
+    json_dict[combo.get()] = {
+        datetime.now().year: {
+            datetime.now().month: {
+                datetime.now().day: {} } } }
+    json_dict[combo.get()][datetime.now().year][datetime.now().month][datetime.now().day].update(dct)
     save_json(json_dict)
     
 
@@ -103,26 +96,41 @@ def window():
             label_stop['text'] = f'{data[selected_item[0]][1]} {str_time_stop}'
 
             if len(data[selected_item[0]]) > 2:
-                if (entry.get() == data[selected_item[0]][2]):
+                if ((entry.get() == data[selected_item[0]][2]) or (entry.get() == '' and data[selected_item[0]][2] == 0)):
                     pass
                 else:
                     ask()
+                    # to_json_dict["task"] = data[selected_item[0]][1]
+                    # to_json_dict["solved"] = data[selected_item[0]][2]
+                    # to_json_dict["time"] = data[selected_item[0]][3]
             else:
                 dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
                 minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
-                data[selected_item[0]].append(entry.get())
-                data[selected_item[0]].append(str(int(minutes_time)))
-                to_json_dict["task"] = data[selected_item[0]][1]
-                to_json_dict["solved"] = data[selected_item[0]][2]
-                to_json_dict["time"] = data[selected_item[0]][3]
+                try:
+                    data[selected_item[0]].append(int(entry.get()))
+                except ValueError:
+                    data[selected_item[0]].append(0)
+
+                data[selected_item[0]].append(int(minutes_time))
+                # to_json_dict["task"] = data[selected_item[0]][1]
+                # to_json_dict["solved"] = data[selected_item[0]][2]
+                # to_json_dict["time"] = data[selected_item[0]][3]
 
             if len(entry.get()) > 0:
                 listBox.itemconfig(selected_item[0], bg='green')
                 entry.delete(0, END)
-            elif data[selected_item[0]][2] != '':
+            elif data[selected_item[0]][2] != 0:
                 listBox.itemconfig(selected_item[0], bg='green')
             else:
                 listBox.itemconfig(selected_item[0], bg='yellow')
+
+            to_json_dict[selected_item[0]] = {
+                "task": data[selected_item[0]][1],
+                "solved": data[selected_item[0]][2],
+                "time": data[selected_item[0]][3]
+            }
+            label_task_info.config(text=f'Сделано: {int(data[selected_item[0]][2])}')
+            label_time_info.config(text=f'Время(мин): {int(data[selected_item[0]][3])}')
 
             btn_start['state'] = NORMAL
             btn_stop['state'] = DISABLED
@@ -138,11 +146,12 @@ def window():
             except ValueError:
                 pass
         elif result == False:
-            data[selected_item[0]][2] = entry.get()
+            if entry.get() == '': data[selected_item[0]][2] = 0
+            else: data[selected_item[0]][2] = entry.get()
         if result != None:
             dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
             minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
-            data[selected_item[0]][3] = int(data[selected_item[0]][3]) + minutes_time
+            data[selected_item[0]][3] = int(data[selected_item[0]][3]) + int(minutes_time)
         
 
     def askChangeAddCancel(root_win):
@@ -182,7 +191,11 @@ def window():
         label_task.config(background='white')
         label_task.pack(anchor=W, padx=5, pady=5)
 
-        label_done = ttk.Label(window, text=f'Сделано: {int(data[selected_item[0]][2])}')
+        label_done = ttk.Label(window)
+        try:
+            label_done.config(text=f'Сделано: {int(data[selected_item[0]][2])}')
+        except ValueError:
+            label_done.config(text=f'Сделано: ')
         label_done.config(background='white')
         label_done.pack(anchor=W, padx=5, pady=5)
 
@@ -227,8 +240,12 @@ def window():
             try:
                 task = data[selected_item[0]][2]
                 time = data[selected_item[0]][3]
-                label_task_info.config(text=f'Сделано: {int(task)}')
-                label_time_info.config(text=f'Время(мин): {int(time)}')
+                try:
+                    label_task_info.config(text=f'Сделано: {int(task)}')
+                    label_time_info.config(text=f'Время(мин): {int(time)}')
+                except ValueError:
+                    label_task_info.config(text=f'Сделано: ')
+                    label_time_info.config(text=f'Время(мин): {int(time)}')
             except IndexError:
                 label_task_info.config(text=f'')
                 label_time_info.config(text=f'')
