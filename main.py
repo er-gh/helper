@@ -60,15 +60,14 @@ def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
             year: {
                 month: {
                     day: {} } } }
-    
-    json_dict[combo.get()][year][month][day].update(dct)
-    
+
     if res == '':
         json_dict[combo.get()][year][month][day].update(dct_check[combo.get()][year][month][day])
         print('res = ""')
+    else: json_dict[combo.get()][year][month][day].update(dct)
     if res == 'y':
         json_dict[combo.get()].update(dct_check[combo.get()])
-        print(f'res = "y"{dct_check}')
+        print(f'res = "y"')
     if res == 'm':
         json_dict[combo.get()][year].update(dct_check[combo.get()][year])
         print('res = "m"')
@@ -89,7 +88,7 @@ def check_dict(dct: dict, name: str) -> str:
         if year == int(e): return "y"
         if month == int(e): return "m"
         if day == int(e): return "d"
-        print(f'keyError:{str(e)}, day:{str(day)}, typeError:{type(str(e))}, typeDay:{type(str(day))}, eq:{int(e) == day}')
+        print(f'keyError:{str(e)}, day:{str(day)}, eq:{int(e) == day}')
     
 
 data = read_file()
@@ -132,6 +131,7 @@ def window():
         global time_stop
         global edited_tasks
         global to_json_dict
+        global from_json_dict
         if combo.get() == "":
             showwarning(message="Пользователь не выбран")
         else:
@@ -167,6 +167,13 @@ def window():
                 "solved": data[selected_item[0]][2],
                 "time": data[selected_item[0]][3]
             }
+
+            if from_json_dict != None:
+                try:
+                    from_json_dict[combo.get()][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[selected_item[0]]
+                except KeyError:
+                    pass
+
             label_task_info.config(text=f'Сделано: {int(data[selected_item[0]][2])}')
             label_time_info.config(text=f'Время(мин): {int(data[selected_item[0]][3])}')
 
@@ -185,7 +192,7 @@ def window():
                 pass
         elif result == False:
             if entry.get() == '': data[selected_item[0]][2] = 0
-            else: data[selected_item[0]][2] = entry.get()
+            else: data[selected_item[0]][2] = int(entry.get())
         if result != None:
             dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
             minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
