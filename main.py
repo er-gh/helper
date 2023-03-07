@@ -61,8 +61,8 @@ def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
                 month: {
                     day: {} } } }
     
-    if res == None:
-        json_dict[combo.get()][year][month][day].update(dct)
+    json_dict[combo.get()][year][month][day].update(dct)
+    
     if res == '':
         json_dict[combo.get()][year][month][day].update(dct_check[combo.get()][year][month][day])
         print('res = ""')
@@ -85,9 +85,11 @@ def check_dict(dct: dict, name: str) -> str:
         dct[name][str(year)][str(month)][str(day)]
         return ''
     except KeyError as e:
-        if str(year) == str(e): return "y"
-        if str(month) == str(e): return "m"
-        if str(day) == str(e): return "d"
+        e = str(e).replace("'","")
+        if year == int(e): return "y"
+        if month == int(e): return "m"
+        if day == int(e): return "d"
+        print(f'keyError:{str(e)}, day:{str(day)}, typeError:{type(str(e))}, typeDay:{type(str(day))}, eq:{int(e) == day}')
     
 
 data = read_file()
