@@ -54,7 +54,7 @@ def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
     month = str(date.month)
     day = str(date.day)
     res = None
-    if dct_check != None: res = check_dict(dct_check, combo.get())
+    if dct_check != None and len(dct_check) > 0: res = check_dict(dct_check, combo.get())
 
     json_dict[combo.get()] = {
             year: {
@@ -62,9 +62,11 @@ def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
                     day: {} } } }
 
     if res == '':
-        json_dict[combo.get()][year][month][day].update(dct_check[combo.get()][year][month][day])
+        #json_dict.update(dct_check)
         print('res = ""')
-    else: json_dict[combo.get()][year][month][day].update(dct)
+    else: 
+        json_dict[combo.get()][year][month][day].update(dct)
+        print(f'else:{json_dict}\n')
     if res == 'y':
         json_dict[combo.get()].update(dct_check[combo.get()])
         print(f'res = "y"')
@@ -72,8 +74,13 @@ def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
         json_dict[combo.get()][year].update(dct_check[combo.get()][year])
         print('res = "m"')
     if res == 'd':
-        json_dict[combo.get()][year][month].update(dct_check[combo.get()][year][month])
+        dct_check[combo.get()][year][month].update(json_dict[combo.get()][year][month])
+        print(f'dct_check:{dct_check}\n')
         print('res = "d"')
+        print(f'json:{json_dict}\n')
+    print(f'json:{json_dict}\n')
+    print(f'dct_check:{dct_check}\n')
+    json_dict.update(dct_check)
     save_json(json_dict)
 
 def check_dict(dct: dict, name: str) -> str:
@@ -88,7 +95,6 @@ def check_dict(dct: dict, name: str) -> str:
         if year == int(e): return "y"
         if month == int(e): return "m"
         if day == int(e): return "d"
-        print(f'keyError:{str(e)}, day:{str(day)}, eq:{int(e) == day}')
     
 
 data = read_file()
@@ -397,8 +403,8 @@ def window():
 
     test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, combo))
     test_btn.pack()
-    print(from_json_dict)
-    print(to_json_dict)
+    print(f'from:{from_json_dict}')
+    print(f'to:{to_json_dict}')
 
     #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
     root.iconphoto(False, tk.PhotoImage(file='icon.png'))
