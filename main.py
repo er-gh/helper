@@ -97,10 +97,9 @@ tmp = list()
 for item in data:
     tmp.append(list(filter(None, item)))
 data = tmp
+name = ''
 names = ["A.A.A", "B.B.B", "C.C.C", "D.D.D", "E.E.E", "F.F.F"]
 selected_item = ()
-edited_tasks = ['edited_tasks', 'solved_tasks', 'solved_time']
-edited_tasks = [0, 0, []]
 str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
 to_json_dict = {}
@@ -108,6 +107,45 @@ from_json_dict = load_json()
 
 
 def window():
+
+    def login_window(root_win):
+
+        def cancel(window):
+            win_destroy(window)
+
+        def win_destroy(window):
+            window.grab_release()
+            window.destroy()
+
+        def save_name(window):
+            nonlocal result
+            name = entry.get().strip()
+            if name != '': result = name
+            cancel(window)
+
+        window = Toplevel(root_win)
+        window.title('Введите ФИО')
+        width, height = 400, 225
+        window.geometry(f"{width}x{height}+{int(root_win.winfo_screenwidth() / 2) - int(width / 2)}+{int(root_win.winfo_screenheight() / 2) - int(height / 2)}")
+        window.resizable(False, False)
+        window["background"] = 'white'
+        result = None
+
+        frame_entry = tk.Frame(window)
+        frame_entry.config(background='white')
+        frame_entry.pack(fill=BOTH, expand=True)
+        entry = ttk.Entry(frame_entry, width=25, font=('', 14))
+        entry.place(relx=0.5, rely=0.4, anchor=CENTER)
+
+        frame = tk.Frame(window)
+        frame.pack(fill=BOTH, side=BOTTOM)
+        button_ok = ttk.Button(frame, text='Продолжить', command=lambda: save_name(window))
+        button_ok.pack(side=RIGHT, padx=10, pady=10)
+
+        window.protocol("WM_DELETE_WINDOW", lambda: cancel(window))
+        window.grab_set()
+        window.wait_window()
+        return result
 
     def start():
         global selected_item
@@ -132,7 +170,7 @@ def window():
         global edited_tasks
         global to_json_dict
         global from_json_dict
-        if combo.get() == "":
+        if name == "":
             showwarning(message="Пользователь не выбран")
         else:
             time_stop = datetime.now()
@@ -172,7 +210,7 @@ def window():
                 try:
                     print(f'from_json_dict:{from_json_dict}\n')
                     print(f'to_json_dict:{to_json_dict}\n')
-                    from_json_dict[combo.get()][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[str(selected_item[0])]
+                    from_json_dict[name][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[str(selected_item[0])]
                 except KeyError:
                     pass
 
@@ -203,7 +241,7 @@ def window():
 
     def askChangeAddCancel(root_win):
         window = Toplevel(root_win)
-        window.title = f'{entry.get()}'
+        window.title(f'{entry.get()}')
         width, height = 400, 225
         window.geometry(f"{width}x{height}+{int(root_win.winfo_screenwidth() / 2) - int(width / 2)}+{int(root_win.winfo_screenheight() / 2) - int(height / 2)}")
         window.resizable(False, False)
@@ -268,10 +306,6 @@ def window():
         window.wait_window()
         return result
 
-
-    def data_last():
-        data.append([])
-        data.append(['Всего', f'{edited_tasks[0]}', f'{edited_tasks[1]}', f'{str(sum_time(*edited_tasks[2]))[:-3]}'])
     
     def save():
         date = f'{datetime.now().strftime("%d|%m|%y")}'
@@ -325,7 +359,24 @@ def window():
     root = Tk()
     root.title('')
     root.minsize(400, 225)
-    root.geometry('800x450')
+    width, height = 800, 450
+    root.geometry(f"{width}x{height}+{int(root.winfo_screenwidth() / 2) - int(width / 2)}+{int(root.winfo_screenheight() / 2) - int(height / 2)}")
+
+    if len(from_json_dict) > 0:
+        global name
+        name = list(from_json_dict.keys())[0]
+
+    if name == '':
+        root.withdraw()
+        result = login_window(root)
+        if result == None: 
+            root.destroy()
+            return
+        name = result
+        root.deiconify()
+
+    print(f'from_json_name: {list(from_json_dict.keys())}')
+    print(f'name: {name}')
 
 
     f_left = Frame(root)
@@ -384,10 +435,8 @@ def window():
     entry['state'] = DISABLED
 
 
-    combo = ttk.Combobox(f_right, values=names)
-    combo.bind("<<ComboboxSelected>>", onComboboxSelect)
-    combo['state'] = 'readonly'
-    combo.pack()
+    label_name = ttk.Label(f_right, text=f'{name}')
+    label_name.pack()
 
     
     label_start = ttk.Label(text='', master=f_right)
@@ -397,7 +446,7 @@ def window():
 
     checkStateOnStart()
 
-    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, combo.get()))
+    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, name))
     test_btn.pack()
     print(f'from:{from_json_dict}')
     print(f'to:{to_json_dict}')
