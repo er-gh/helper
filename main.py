@@ -47,39 +47,33 @@ def save_json(dct: dict):
     with open('save.json', 'w', encoding='utf-8') as fp:
         json.dump(dct, fp, indent=4, ensure_ascii=False)
 
-def save_in_json(dct_check: dict, dct: dict, combo: ttk.Combobox) -> None:
+def save_in_json(dct_check: dict, dct: dict, name: str) -> None:
     json_dict = {}
     date = datetime.now()
     year = str(date.year)
     month = str(date.month)
     day = str(date.day)
     res = None
-    if dct_check != None and len(dct_check) > 0: res = check_dict(dct_check, combo.get())
+    if dct_check != None and len(dct_check) > 0: res = check_dict(dct_check, name)
 
-    json_dict[combo.get()] = {
+    json_dict[name] = {
             year: {
                 month: {
                     day: {} } } }
 
     if res == '':
-        #json_dict.update(dct_check)
         print('res = ""')
     else: 
-        json_dict[combo.get()][year][month][day].update(dct)
-        print(f'else:{json_dict}\n')
+        json_dict[name][year][month][day].update(dct)
     if res == 'y':
-        json_dict[combo.get()].update(dct_check[combo.get()])
+        dct_check[name].update(json_dict[name])
         print(f'res = "y"')
     if res == 'm':
-        json_dict[combo.get()][year].update(dct_check[combo.get()][year])
+        dct_check[name][year].update(json_dict[name][year])
         print('res = "m"')
     if res == 'd':
-        dct_check[combo.get()][year][month].update(json_dict[combo.get()][year][month])
-        print(f'dct_check:{dct_check}\n')
+        dct_check[name][year][month].update(json_dict[name][year][month])
         print('res = "d"')
-        print(f'json:{json_dict}\n')
-    print(f'json:{json_dict}\n')
-    print(f'dct_check:{dct_check}\n')
     json_dict.update(dct_check)
     save_json(json_dict)
 
@@ -168,7 +162,7 @@ def window():
             else:
                 listBox.itemconfig(selected_item[0], bg='yellow')
 
-            to_json_dict[selected_item[0]] = {
+            to_json_dict[str(selected_item[0])] = {
                 "task": data[selected_item[0]][1],
                 "solved": data[selected_item[0]][2],
                 "time": data[selected_item[0]][3]
@@ -176,7 +170,9 @@ def window():
 
             if from_json_dict != None:
                 try:
-                    from_json_dict[combo.get()][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[selected_item[0]]
+                    print(f'from_json_dict:{from_json_dict}\n')
+                    print(f'to_json_dict:{to_json_dict}\n')
+                    from_json_dict[combo.get()][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[str(selected_item[0])]
                 except KeyError:
                     pass
 
