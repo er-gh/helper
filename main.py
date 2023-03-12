@@ -2,11 +2,12 @@ import pandas as pd
 import tkinter as tk
 from tkinter import *
 from tkinter import ttk, filedialog
-from tkinter.messagebox import askyesno, showwarning
+from tkinter.messagebox import showwarning
 from datetime import datetime, timedelta
 import pystray
 from PIL import Image
 import json
+import glob
 
 
 def read_file() -> pd.DataFrame:
@@ -17,10 +18,11 @@ def read_file() -> pd.DataFrame:
         return pd.DataFrame(excel_data)
 
 def write_file(col, data, sheet_name):
-    filepath = filedialog.asksaveasfilename(defaultextension='xlsx')
+    filepath = filedialog.asksaveasfilename()
+    print(filepath)
     if filepath != '':
         df1 = pd.DataFrame(data, columns=col)
-        df1.to_excel(f"{filepath}", sheet_name=sheet_name, index=False)
+        df1.to_excel(f"{filepath}.{datetime.now().day}_{datetime.now().month}_{datetime.now().year}.xlsx", sheet_name=sheet_name, index=False)
 
 def diff_time(time_start: datetime, time_stop: datetime) -> timedelta:
     start = timedelta(minutes=time_start.minute, hours=time_start.hour, days=time_start.day)
@@ -36,15 +38,26 @@ def dt_to_td(time: datetime) -> timedelta:
     return timedelta(hours=time.hour, minutes=time.minute)
 
 def load_json() -> dict | None:
+    json_file = glob.glob('*.json')
+    if len(json_file) > 1: 
+        showwarning("", "В папке может быть только 1 файл с расширением .json")
+    global name
     try:
-        with open('save.json', encoding='utf-8') as fp:
+        with open(json_file[0], encoding='utf-8') as fp:
             json_dict = json.load(fp)
+            name = list(json_dict.keys())[0]
         return json_dict
+    except IndexError:
+        return None
+    except UnboundLocalError:
+        print("unbound")
+        return None
     except FileNotFoundError:
+        print("fnfe")
         return None
 
 def save_json(dct: dict):
-    with open('save.json', 'w', encoding='utf-8') as fp:
+    with open(f'{name}.json', 'w', encoding='utf-8') as fp:
         json.dump(dct, fp, indent=4, ensure_ascii=False)
 
 def save_in_json(dct_check: dict, dct: dict, name: str) -> None:
@@ -55,6 +68,7 @@ def save_in_json(dct_check: dict, dct: dict, name: str) -> None:
     day = str(date.day)
     res = None
     if dct_check != None and len(dct_check) > 0: res = check_dict(dct_check, name)
+    else: dct_check = {}
 
     json_dict[name] = {
             year: {
@@ -74,6 +88,7 @@ def save_in_json(dct_check: dict, dct: dict, name: str) -> None:
     if res == 'd':
         dct_check[name][year][month].update(json_dict[name][year][month])
         print('res = "d"')
+    print(json_dict)
     json_dict.update(dct_check)
     save_json(json_dict)
 
@@ -91,19 +106,18 @@ def check_dict(dct: dict, name: str) -> str:
         if day == int(e): return "d"
     
 
+name = ''
+to_json_dict = {}
+from_json_dict = load_json()
 data = read_file()
 data = data.fillna('').values.tolist()
 tmp = list()
 for item in data:
-    tmp.append(list(filter(None, item)))
+    tmp.append(list(filter(lambda s: s != '', item)))
 data = tmp
-name = ''
-names = ["A.A.A", "B.B.B", "C.C.C", "D.D.D", "E.E.E", "F.F.F"]
 selected_item = ()
 str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
-to_json_dict = {}
-from_json_dict = load_json()
 
 
 def window():
@@ -188,6 +202,7 @@ def window():
                 try:
                     data[selected_item[0]].append(int(entry.get()))
                 except ValueError:
+                    showwarning(message="Можно вводить только цифры")
                     data[selected_item[0]].append(0)
 
                 data[selected_item[0]].append(int(minutes_time))
@@ -208,11 +223,11 @@ def window():
 
             if from_json_dict != None:
                 try:
-                    print(f'from_json_dict:{from_json_dict}\n')
-                    print(f'to_json_dict:{to_json_dict}\n')
                     from_json_dict[name][str(datetime.now().year)][str(datetime.now().month)][str(datetime.now().day)][str(selected_item[0])] = to_json_dict[str(selected_item[0])]
                 except KeyError:
                     pass
+
+            save_in_json(from_json_dict, to_json_dict, name)
 
             label_task_info.config(text=f'Сделано: {int(data[selected_item[0]][2])}')
             label_time_info.config(text=f'Время(мин): {int(data[selected_item[0]][3])}')
@@ -222,6 +237,7 @@ def window():
             listBox['state'] = NORMAL
             entry['state'] = DISABLED
             btn_save['state'] = NORMAL
+
 
     def ask():
         result = askChangeAddCancel(root)
@@ -331,11 +347,9 @@ def window():
                 label_task_info.config(text=f'')
                 label_time_info.config(text=f'')
 
-    def onComboboxSelect(event):
-        if len(listBox.curselection()) > 0:
-            listBox.select_set(selected_item[0])
 
     def onQuitWindow(icon):
+        save()
         icon.stop()
         root.destroy()
 
@@ -353,7 +367,8 @@ def window():
     def checkStateOnStart():
         for i in range(len(data)):
             if len(data[i]) > 2:
-                listBox.itemconfig(i, bg='green')
+                if data[i][2] > 0: listBox.itemconfig(i, bg='green')
+                else: listBox.itemconfig(i, bg='yellow')
 
 
     root = Tk()
@@ -362,10 +377,7 @@ def window():
     width, height = 800, 450
     root.geometry(f"{width}x{height}+{int(root.winfo_screenwidth() / 2) - int(width / 2)}+{int(root.winfo_screenheight() / 2) - int(height / 2)}")
 
-    if len(from_json_dict) > 0:
-        global name
-        name = list(from_json_dict.keys())[0]
-
+    global name
     if name == '':
         root.withdraw()
         result = login_window(root)
@@ -374,9 +386,6 @@ def window():
             return
         name = result
         root.deiconify()
-
-    print(f'from_json_name: {list(from_json_dict.keys())}')
-    print(f'name: {name}')
 
 
     f_left = Frame(root)
@@ -446,12 +455,7 @@ def window():
 
     checkStateOnStart()
 
-    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, name))
-    test_btn.pack()
-    print(f'from:{from_json_dict}')
-    print(f'to:{to_json_dict}')
-
-    #root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
+    root.protocol("WM_DELETE_WINDOW", onDeleteWindow)
     root.iconphoto(False, tk.PhotoImage(file='icon.png'))
 
     root.mainloop()
