@@ -397,7 +397,7 @@ def window():
 
     checkStateOnStart()
 
-    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, combo))
+    test_btn = ttk.Button(text="Test", command=lambda: save_in_json(from_json_dict, to_json_dict, combo.get()))
     test_btn.pack()
     print(f'from:{from_json_dict}')
     print(f'to:{to_json_dict}')
