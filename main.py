@@ -8,21 +8,21 @@ import pystray
 from PIL import Image
 import json
 import glob
+import os
 
 
 def read_file() -> pd.DataFrame:
-    #filepath = filedialog.askopenfilename(defaultextension='xlsx')
-    filepath = '123.xlsx'
+    filepath = filedialog.askopenfilename(defaultextension='xlsx')
     if filepath != '':
         excel_data = pd.read_excel(filepath)
         return pd.DataFrame(excel_data)
 
 def write_file(col, data, sheet_name):
-    filepath = filedialog.asksaveasfilename()
-    print(filepath)
-    if filepath != '':
-        df1 = pd.DataFrame(data, columns=col)
-        df1.to_excel(f"{filepath}.{datetime.now().day}_{datetime.now().month}_{datetime.now().year}.xlsx", sheet_name=sheet_name, index=False)
+    tmp_name = name
+    tmp_name = tmp_name.replace(' ', '_')
+    filepath = os.getcwd() + f'\{datetime.now().year}_{datetime.now().month}_{datetime.now().day}_{tmp_name}.xlsx'
+    df1 = pd.DataFrame(data, columns=col)
+    df1.to_excel(filepath, sheet_name=sheet_name, index=False)
 
 def diff_time(time_start: datetime, time_stop: datetime) -> timedelta:
     start = timedelta(minutes=time_start.minute, hours=time_start.hour, days=time_start.day)
@@ -57,7 +57,9 @@ def load_json() -> dict | None:
         return None
 
 def save_json(dct: dict):
-    with open(f'{name}.json', 'w', encoding='utf-8') as fp:
+    tmp_name = name
+    tmp_name = tmp_name.replace(' ', '_')
+    with open(f'{tmp_name}.json', 'w', encoding='utf-8') as fp:
         json.dump(dct, fp, indent=4, ensure_ascii=False)
 
 def save_in_json(dct_check: dict, dct: dict, name: str) -> None:
@@ -110,11 +112,14 @@ name = ''
 to_json_dict = {}
 from_json_dict = load_json()
 data = read_file()
-data = data.fillna('').values.tolist()
-tmp = list()
-for item in data:
-    tmp.append(list(filter(lambda s: s != '', item)))
-data = tmp
+try:
+    data = data.fillna('').values.tolist()
+    tmp = list()
+    for item in data:
+        tmp.append(list(filter(lambda s: s != '', item)))
+    data = tmp
+except AttributeError:
+    data = []
 selected_item = ()
 str_time_start, str_time_stop = '', ''
 time_start, time_stop = 0, 0
@@ -144,6 +149,8 @@ def window():
         window.resizable(False, False)
         window["background"] = 'white'
         result = None
+
+        window.focus_force()
 
         frame_entry = tk.Frame(window)
         frame_entry.config(background='white')
@@ -202,13 +209,17 @@ def window():
                 try:
                     data[selected_item[0]].append(int(entry.get()))
                 except ValueError:
-                    showwarning(message="Можно вводить только цифры")
+                    if entry.get().strip() != '': showwarning(message="Можно вводить только цифры")
                     data[selected_item[0]].append(0)
 
                 data[selected_item[0]].append(int(minutes_time))
 
             if len(entry.get()) > 0:
-                listBox.itemconfig(selected_item[0], bg='green')
+                try:
+                    if int(entry.get()):
+                        listBox.itemconfig(selected_item[0], bg='green')
+                except ValueError:
+                    listBox.itemconfig(selected_item[0], bg='yellow')
                 entry.delete(0, END)
             elif data[selected_item[0]][2] != 0:
                 listBox.itemconfig(selected_item[0], bg='green')
@@ -241,14 +252,14 @@ def window():
 
     def ask():
         result = askChangeAddCancel(root)
-        if result: 
-            try:
+        try:
+            if result: 
                 data[selected_item[0]][2] = int(entry.get()) + int(data[selected_item[0]][2])
-            except ValueError:
-                pass
-        elif result == False:
-            if entry.get() == '': data[selected_item[0]][2] = 0
-            else: data[selected_item[0]][2] = int(entry.get())
+            elif result == False:
+                if entry.get() == '': data[selected_item[0]][2] = 0
+                else: data[selected_item[0]][2] = int(entry.get())
+        except ValueError:
+            data[selected_item[0]][2] = 0
         if result != None:
             dt_diff_time = datetime.strptime(str(diff_time(time_start, time_stop)), '%H:%M:%S')
             minutes_time = dt_to_td(dt_diff_time).total_seconds() / 60
@@ -349,7 +360,7 @@ def window():
 
 
     def onQuitWindow(icon):
-        save()
+        if len(to_json_dict) > 0: save()
         icon.stop()
         root.destroy()
 
@@ -386,6 +397,7 @@ def window():
             return
         name = result
         root.deiconify()
+        root.focus_force()
 
 
     f_left = Frame(root)
