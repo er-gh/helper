@@ -79,8 +79,10 @@ def main_window():
         for year in range(int(date_to_year) - int(date_from_year) + 1):
             year = int(date_from_year) + year
             try:
-                for month in range(1, 13 - abs(int(date_to_month) - int(date_from_month))):
-                    month = int(date_from_month)
+                rng = abs(int(date_to_month) - int(date_from_month)) + 1
+                if date_to_month > date_from_month: rng = 13 - date_to_month - date_from_month
+                for month in range(rng):
+                    month = ((int(date_from_month) + month) % 12) + 1
                     try:
                         for day in range(1, 32):
                             #print(f'year:{year}, month:{month}, day:{day}')
