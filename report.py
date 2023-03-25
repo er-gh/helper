@@ -71,30 +71,36 @@ def main_window():
                 pass
 
         print(date_from, date_to)
-        print(f'year:{date_from_year}, month:{date_from_month}, day:{date_from_day}')
-        print(f'year:{date_to_year}, month:{date_to_month}, day:{date_to_day}')
-        print([json_dict[name]['2023'] for name in selected_names])
+        # print(f'year:{date_from_year}, month:{date_from_month}, day:{date_from_day}')
+        # print(f'year:{date_to_year}, month:{date_to_month}, day:{date_to_day}')
+        # print([json_dict[name]['2023'] for name in selected_names])
 
 
         for year in range(int(date_to_year) - int(date_from_year) + 1):
-            year = int(date_from_year) + year
-            try:
-                rng = abs(int(date_to_month) - int(date_from_month)) + 1
-                if date_to_month > date_from_month: rng = 13 - date_to_month - date_from_month
-                for month in range(rng):
-                    month = ((int(date_from_month) + month) % 12) + 1
+            year = (int(date_from_year) + year)
+            rng_mnth = 12
+            if int(date_from_year) == int(date_to_year): rng_mnth = (int(date_to_month) - int(date_from_month) + 1)
+            elif year == int(date_from_year): rng_mnth = (13- int(date_from_month))
+            elif year == int(date_to_year): rng_mnth = int(date_to_month)
+
+            for month in range(rng_mnth):
+                if year == int(date_to_year): month += 1
+                else: month = (int(date_from_month) + month)
+                rng_day = 31
+                if ( int(date_from_month) == int(date_to_month) ) and ( int(date_from_year) == int(date_to_year) ): 
+                    rng_day = int(date_to_day) - int(date_from_day) + 1
+                elif month == int(date_from_month) and year == int(date_from_year): rng_day = 32 - int(date_from_day)
+                elif month == int(date_to_month) and year == int(date_to_year): rng_day = int(date_to_day)
+
+                for day in range(rng_day):
+                    if month == int(date_from_month) and year == int(date_from_year): day = (int(date_from_day) + day)
+                    else: day += 1
+                    print(f'year:{year}, month:{month}, day:{day}, rng_day:{rng_day}, rng_mnth:{rng_mnth}')
                     try:
-                        for day in range(1, 32):
-                            #print(f'year:{year}, month:{month}, day:{day}')
-                            try:
-                                print([json_dict[name][str(year)][str(month)][str(day)] for name in selected_names])
-                            except KeyError:
-                                continue
+                        print([json_dict[name][str(year)][str(month)][str(day)] for name in selected_names])
                     except KeyError:
-                        break
-            except KeyError:
-                break
-#    10/02/2022
+                        print('continue')
+                        continue
 
 
     root = Tk()
