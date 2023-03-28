@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import os
 import tkinter as tk
+import pandas as pd
 
 def load_json() -> dict | None:
     filepath = filedialog.askopenfilenames(defaultextension='json')
@@ -22,13 +23,18 @@ def save_json(json_dict: dict):
     with open('test_new_json.json', 'w', encoding='utf-8') as fp:
         json.dump(json_dict, fp, indent=4, ensure_ascii=False)
 
-
 def get_names(json_dict: dict) -> list:
     return list(json_dict.keys())
+
+def write_file(col, data):
+    filepath = os.getcwd() + f'\Отчет.xlsx'
+    df1 = pd.DataFrame(data, columns=col)
+    df1.to_excel(filepath, index=False)
 
 def main_window():
 
     json_dict = {}
+    sorted_json_dict = {}
     names = []
     selected = ()
     selected_names = []
@@ -57,6 +63,7 @@ def main_window():
     
     def make_report():
         nonlocal json_dict
+        nonlocal sorted_json_dict
         date_from = entry_from.get().replace(' ', '')
         date_to = entry_to.get().replace(' ', '')
         date_from_year, date_from_month, date_from_day, date_to_year, date_to_month, date_to_day = None, None, None, None, None, None
@@ -69,38 +76,65 @@ def main_window():
                 date_to_day, date_to_month, date_to_year = date_to.split('/')
             except ValueError:
                 pass
-
+        if date_from_year != None:
+            date_from_year = int(date_from_year)
+            date_from_month = int(date_from_month)
+            date_from_day = int(date_from_day)
+            date_to_year = int(date_to_year)
+            date_to_month = int(date_to_month)
+            date_to_day = int(date_to_day)
+            
         print(date_from, date_to)
-        # print(f'year:{date_from_year}, month:{date_from_month}, day:{date_from_day}')
-        # print(f'year:{date_to_year}, month:{date_to_month}, day:{date_to_day}')
-        # print([json_dict[name]['2023'] for name in selected_names])
 
-
-        for year in range(int(date_to_year) - int(date_from_year) + 1):
-            year = (int(date_from_year) + year)
-            rng_mnth = 12
-            if int(date_from_year) == int(date_to_year): rng_mnth = (int(date_to_month) - int(date_from_month) + 1)
-            elif year == int(date_from_year): rng_mnth = (13- int(date_from_month))
-            elif year == int(date_to_year): rng_mnth = int(date_to_month)
-
-            for month in range(rng_mnth):
-                if year == int(date_to_year): month += 1
-                else: month = (int(date_from_month) + month)
-                rng_day = 31
-                if ( int(date_from_month) == int(date_to_month) ) and ( int(date_from_year) == int(date_to_year) ): 
-                    rng_day = int(date_to_day) - int(date_from_day) + 1
-                elif month == int(date_from_month) and year == int(date_from_year): rng_day = 32 - int(date_from_day)
-                elif month == int(date_to_month) and year == int(date_to_year): rng_day = int(date_to_day)
-
-                for day in range(rng_day):
-                    if month == int(date_from_month) and year == int(date_from_year): day = (int(date_from_day) + day)
-                    else: day += 1
-                    print(f'year:{year}, month:{month}, day:{day}, rng_day:{rng_day}, rng_mnth:{rng_mnth}')
-                    try:
-                        print([json_dict[name][str(year)][str(month)][str(day)] for name in selected_names])
-                    except KeyError:
-                        print('continue')
-                        continue
+        for year in range(date_from_year, date_to_year + 1):
+            rng_mnth = (1, 12 + 1)
+            if date_from_year == date_to_year: 
+                rng_mnth = (date_from_month, date_to_month + 1)
+                if date_from_month == date_to_month: 
+                    if date_from_day == date_to_day:
+                        rng_mnth = (date_from_month, date_to_month + 1)
+            else: 
+                if year == date_from_year: 
+                    rng_mnth = (date_from_month, 12 + 1)
+                elif year == date_to_year: 
+                    rng_mnth = (1, date_to_month + 1)
+            for month in range(*rng_mnth):
+                rng_day = (1, 31 + 1)
+                if date_from_day != date_to_day:
+                    if date_from_year != date_to_year and date_from_month != date_to_month:
+                        if year == date_from_year: 
+                            if month == date_from_month:
+                                rng_day = (date_from_day, 31 + 1)
+                        elif year == date_to_year:
+                            if month == date_to_month:
+                                rng_day = (1, date_to_day + 1)
+                    if date_from_year == date_to_year:
+                        if date_from_month != date_to_month:
+                            if month == date_from_month:
+                                    rng_day = (date_from_day, 31 + 1)
+                            elif month == date_to_month:
+                                    rng_day = (1, date_to_day + 1)
+                        if date_from_month == date_to_month:
+                            rng_day = (date_from_day, date_to_day + 1)
+                if date_from_day == date_to_day:
+                    if date_from_year == date_to_year:
+                        if date_from_month != date_to_month:
+                            if month == date_from_month and year == date_from_year: 
+                                rng_day = (date_from_day, 31 + 1)
+                            elif month == date_to_month and year == date_to_year:
+                                rng_day = (1, date_to_day + 1)
+                        if date_from_month == date_to_month:
+                            rng_day = (date_from_day, date_to_day + 1)
+                    if date_from_year != date_to_year:
+                        if date_from_month != date_to_month or date_from_month == date_to_month:
+                            if month == date_from_month and year == date_from_year: 
+                                rng_day = (date_from_day, 31 + 1)   
+                            elif month == date_to_month and year == date_to_year:
+                                rng_day = (1, date_to_day + 1)
+                                
+                for day in range(*rng_day):
+                    print(f'{day}-{month}-{year}, rng_m:{rng_mnth}, rng_d:{rng_day}')
+        print(sorted_json_dict)
 
 
     root = Tk()
