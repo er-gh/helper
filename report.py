@@ -93,7 +93,6 @@ def main_window():
         
         for name in selected_names:
             temp_check_task = {}
-            # rng = date_to - date_from
             date_counter = date_from
             while date_counter <= date_to:
                 try:
@@ -109,10 +108,13 @@ def main_window():
                             temp_check_task[task_num] = dict(value.items())
                 except KeyError as e:
                     int_e = int(str(e).replace("'", ''))
-                    month = str(date_counter.month)
-                    if int_e == date_counter.year: date_counter += relativedelta(year=+1, days=-1)
-                    if type(str(int_e)) == type(month) and int_e == int(month): date_counter += relativedelta(month=+1, days=-1)
-                    print(f'cont: {e}', date_counter, name)
+                    if int_e == date_counter.year: 
+                        date_counter += relativedelta(years=+1)
+                        date_counter = datetime(year=date_counter.year, month=1, day=1)
+                    if date_counter.month != date_counter.day and int_e == date_counter.month: 
+                        date_counter += relativedelta(months=+1)
+                        date_counter = datetime(year=date_counter.year, month=date_counter.month, day=1)
+                    print(f'cont: {e}, :{int_e}', date_counter, name)
                 date_counter += relativedelta(days=+1)
 
             sorted_json_dict[name] = temp_check_task
