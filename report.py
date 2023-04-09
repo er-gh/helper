@@ -98,8 +98,6 @@ def main_window():
                 try:
                     js_d = json_dict[name][str(date_counter.year)][str(date_counter.month)][str(date_counter.day)]
                     for task_num, value in js_d.items():
-                        print(f'task_num:{task_num}', [f'{k}:{v}' for k, v in value.items()])
-                        
                         if task_num in temp_check_task:
                             temp_check_task[task_num]['task'] = value['task']
                             temp_check_task[task_num]['solved'] += value['solved']
@@ -111,14 +109,14 @@ def main_window():
                     if int_e == date_counter.year: 
                         date_counter += relativedelta(years=+1)
                         date_counter = datetime(year=date_counter.year, month=1, day=1)
+                        continue
                     if date_counter.month != date_counter.day and int_e == date_counter.month: 
                         date_counter += relativedelta(months=+1)
                         date_counter = datetime(year=date_counter.year, month=date_counter.month, day=1)
-                    print(f'cont: {e}, :{int_e}', date_counter, name)
+                        continue
                 date_counter += relativedelta(days=+1)
 
             sorted_json_dict[name] = temp_check_task
-        print(sorted_json_dict)
 
 
     root = Tk()
