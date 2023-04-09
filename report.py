@@ -2,10 +2,15 @@ from tkinter import ttk, filedialog
 from tkinter.messagebox import showerror
 from tkinter import *
 from pathlib import Path
-import json
-import os
+from datetime import datetime
+from dateutil.relativedelta import *
+from dateutil.relativedelta import relativedelta
 import tkinter as tk
 import pandas as pd
+import json
+import os
+import copy
+
 
 def load_json() -> dict | None:
     filepath = filedialog.askopenfilenames(defaultextension='json')
@@ -19,17 +24,21 @@ def load_json() -> dict | None:
             json_dict.update(json.load(fp))
     return json_dict
 
+
 def save_json(json_dict: dict):
     with open('test_new_json.json', 'w', encoding='utf-8') as fp:
         json.dump(json_dict, fp, indent=4, ensure_ascii=False)
 
+
 def get_names(json_dict: dict) -> list:
     return list(json_dict.keys())
+
 
 def write_file(col, data):
     filepath = os.getcwd() + f'\Отчет.xlsx'
     df1 = pd.DataFrame(data, columns=col)
     df1.to_excel(filepath, index=False)
+
 
 def main_window():
 
@@ -64,76 +73,49 @@ def main_window():
     def make_report():
         nonlocal json_dict
         nonlocal sorted_json_dict
-        date_from = entry_from.get().replace(' ', '')
-        date_to = entry_to.get().replace(' ', '')
-        date_from_year, date_from_month, date_from_day, date_to_year, date_to_month, date_to_day = None, None, None, None, None, None
+        tmp_date_from = entry_from.get().replace(' ', '')
+        tmp_date_to = entry_to.get().replace(' ', '')
+        date_from, date_to, date_counter = {}, {}, {}
         try:
-            date_from_day, date_from_month, date_from_year = date_from.split('.')
-            date_to_day, date_to_month, date_to_year = date_to.split('.')
+            date_from['day'], date_from['month'], date_from['year'] = tmp_date_from.split('.')
+            date_to['day'], date_to['month'], date_to['year'] = tmp_date_to.split('.')
         except ValueError:
             try:
-                date_from_day, date_from_month, date_from_year = date_from.split('/')
-                date_to_day, date_to_month, date_to_year = date_to.split('/')
+                date_from['day'], date_from['month'], date_from['year'] = tmp_date_from.split('/')
+                date_to['day'], date_to['month'], date_to['year'] = tmp_date_to.split('/')
             except ValueError:
                 pass
-        if date_from_year != None:
-            date_from_year = int(date_from_year)
-            date_from_month = int(date_from_month)
-            date_from_day = int(date_from_day)
-            date_to_year = int(date_to_year)
-            date_to_month = int(date_to_month)
-            date_to_day = int(date_to_day)
-            
-        print(date_from, date_to)
 
-        for year in range(date_from_year, date_to_year + 1):
-            rng_mnth = (1, 12 + 1)
-            if date_from_year == date_to_year: 
-                rng_mnth = (date_from_month, date_to_month + 1)
-                if date_from_month == date_to_month: 
-                    if date_from_day == date_to_day:
-                        rng_mnth = (date_from_month, date_to_month + 1)
-            else: 
-                if year == date_from_year: 
-                    rng_mnth = (date_from_month, 12 + 1)
-                elif year == date_to_year: 
-                    rng_mnth = (1, date_to_month + 1)
-            for month in range(*rng_mnth):
-                rng_day = (1, 31 + 1)
-                if date_from_day != date_to_day:
-                    if date_from_year != date_to_year and date_from_month != date_to_month:
-                        if year == date_from_year: 
-                            if month == date_from_month:
-                                rng_day = (date_from_day, 31 + 1)
-                        elif year == date_to_year:
-                            if month == date_to_month:
-                                rng_day = (1, date_to_day + 1)
-                    if date_from_year == date_to_year:
-                        if date_from_month != date_to_month:
-                            if month == date_from_month:
-                                    rng_day = (date_from_day, 31 + 1)
-                            elif month == date_to_month:
-                                    rng_day = (1, date_to_day + 1)
-                        if date_from_month == date_to_month:
-                            rng_day = (date_from_day, date_to_day + 1)
-                if date_from_day == date_to_day:
-                    if date_from_year == date_to_year:
-                        if date_from_month != date_to_month:
-                            if month == date_from_month and year == date_from_year: 
-                                rng_day = (date_from_day, 31 + 1)
-                            elif month == date_to_month and year == date_to_year:
-                                rng_day = (1, date_to_day + 1)
-                        if date_from_month == date_to_month:
-                            rng_day = (date_from_day, date_to_day + 1)
-                    if date_from_year != date_to_year:
-                        if date_from_month != date_to_month or date_from_month == date_to_month:
-                            if month == date_from_month and year == date_from_year: 
-                                rng_day = (date_from_day, 31 + 1)   
-                            elif month == date_to_month and year == date_to_year:
-                                rng_day = (1, date_to_day + 1)
-                                
-                for day in range(*rng_day):
-                    print(f'{day}-{month}-{year}, rng_m:{rng_mnth}, rng_d:{rng_day}')
+        if len(date_from) > 0:
+            date_from = datetime(year=int(date_from['year']), month=int(date_from['month']), day=int(date_from['day']))
+            date_to = datetime(year=int(date_to['year']), month=int(date_to['month']), day=int(date_to['day']))
+
+        
+        for name in selected_names:
+            temp_check_task = {}
+            # rng = date_to - date_from
+            date_counter = date_from
+            while date_counter <= date_to:
+                try:
+                    js_d = json_dict[name][str(date_counter.year)][str(date_counter.month)][str(date_counter.day)]
+                    for task_num, value in js_d.items():
+                        print(f'task_num:{task_num}', [f'{k}:{v}' for k, v in value.items()])
+                        
+                        if task_num in temp_check_task:
+                            temp_check_task[task_num]['task'] = value['task']
+                            temp_check_task[task_num]['solved'] += value['solved']
+                            temp_check_task[task_num]['time'] += value['time']
+                        else:
+                            temp_check_task[task_num] = dict(value.items())
+                except KeyError as e:
+                    int_e = int(str(e).replace("'", ''))
+                    month = str(date_counter.month)
+                    if int_e == date_counter.year: date_counter += relativedelta(year=+1, days=-1)
+                    if type(str(int_e)) == type(month) and int_e == int(month): date_counter += relativedelta(month=+1, days=-1)
+                    print(f'cont: {e}', date_counter, name)
+                date_counter += relativedelta(days=+1)
+
+            sorted_json_dict[name] = temp_check_task
         print(sorted_json_dict)
 
 
@@ -143,7 +125,6 @@ def main_window():
     root.maxsize(400, 300)
     width, height = 400, 300
     root.geometry(f"{width}x{height}+{int(root.winfo_screenwidth() / 2) - int(width / 2)}+{int(root.winfo_screenheight() / 2) - int(height / 2)}")
-
 
     
     btn = ttk.Button(root, command=load_json_save, text='Открыть')
@@ -158,17 +139,19 @@ def main_window():
     label_from = tk.Label(root, text='От: ')
     label_from.pack(side=LEFT)
     entry_from = tk.Entry(root)
+    entry_from.insert(0, '10/03/2023')
     entry_from.pack(side=LEFT)
     label_to = tk.Label(root, text='До: ')
     label_to.pack(side=LEFT)
     entry_to = tk.Entry(root)
+    entry_to.insert(0, '17/04/2023')
     entry_to.pack(side=LEFT)
     make_report_btn = ttk.Button(root, text='Создать', command=make_report)
     make_report_btn.pack(side=LEFT)
 
     
-
     root.mainloop()
+
 
 def main():
     main_window()
