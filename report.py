@@ -9,7 +9,6 @@ import tkinter as tk
 import pandas as pd
 import json
 import os
-import copy
 
 
 def load_json() -> dict | None:
@@ -25,19 +24,23 @@ def load_json() -> dict | None:
     return json_dict
 
 
-def save_json(json_dict: dict):
-    with open('test_new_json.json', 'w', encoding='utf-8') as fp:
-        json.dump(json_dict, fp, indent=4, ensure_ascii=False)
-
-
 def get_names(json_dict: dict) -> list:
     return list(json_dict.keys())
 
 
-def write_file(col, data):
-    filepath = os.getcwd() + f'\Отчет.xlsx'
-    df1 = pd.DataFrame(data, columns=col)
-    df1.to_excel(filepath, index=False)
+def write_file(json_dict: dict, date_from: datetime, date_to: datetime) -> None:
+    filepath = os.getcwd() + f'\\Отчет_С_{date_from.year}-{date_from.month}-{date_from.day}_По_{date_to.year}-{date_to.month}-{date_to.day}.xlsx'
+    df = pd.DataFrame()
+    with pd.ExcelWriter(filepath, mode='w') as writer:
+            df.to_excel(writer, index=False, sheet_name=' ')
+    for name, item in json_dict.items():
+        temp_items_list = []
+        for key, value in item.items():
+            temp_items_list.append([key, value['task'], value['solved'], value['time']])
+        df = pd.DataFrame(temp_items_list, columns=['№', 'Задание', 'Выполнено', 'Время'])
+        with pd.ExcelWriter(filepath, mode='a') as writer:
+            df.to_excel(writer, index=False, sheet_name=f'{name}')
+
 
 
 def main_window():
@@ -57,16 +60,10 @@ def main_window():
         listbox_name.insert(END, *names)
         
     
-    def save_json_save():
-        save_json(json_dict)
-
-    
     def listbox_name_selected(event):
         nonlocal selected
         nonlocal selected_names
         selected = listbox_name.curselection()
-        print([listbox_name.get(i) for i in selected])
-        print(selected)
         selected_names = [listbox_name.get(i) for i in selected]
 
     
@@ -89,6 +86,7 @@ def main_window():
         if len(date_from) > 0:
             date_from = datetime(year=int(date_from['year']), month=int(date_from['month']), day=int(date_from['day']))
             date_to = datetime(year=int(date_to['year']), month=int(date_to['month']), day=int(date_to['day']))
+        else: showerror(message='Допустимые разделители: "/" и "."')
 
         
         for name in selected_names:
@@ -117,6 +115,7 @@ def main_window():
                 date_counter += relativedelta(days=+1)
 
             sorted_json_dict[name] = temp_check_task
+        write_file(sorted_json_dict, date_from, date_to)
 
 
     root = Tk()
@@ -129,11 +128,9 @@ def main_window():
     
     btn = ttk.Button(root, command=load_json_save, text='Открыть')
     btn.pack()
-    btn_save = ttk.Button(root, command=save_json_save, text='Save')
-    btn_save.pack(pady=10)
 
 
-    listbox_name = Listbox(root, relief=FLAT, width=50, selectmode='multiple')
+    listbox_name = Listbox(root, relief=FLAT, width=50, height=15, selectmode='multiple')
     listbox_name.bind('<<ListboxSelect>>', listbox_name_selected)
     listbox_name.pack()
     label_from = tk.Label(root, text='От: ')
